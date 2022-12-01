@@ -1,0 +1,25 @@
+{
+    "name": "easyswoole/queue",
+    "description": "A simple Queue implementation integrated into easySwoole",
+    "type": "library",
+    "keywords": [
+        "easySwoole",
+        "Queue",
+        "Redis",
+        "beanstalkd"
+    ],
+    "license": "Apache-2.0",
+    "autoload": {
+        "psr-4": {
+            "EasySwoole\\Queue\\": "src/"
+        }
+    },
+    "require": {
+        "ext-swoole": ">=4.4.0",
+        "easyswoole/component": "^2.0",
+        "easyswoole/redis-pool": "^2.2"
+    },
+    "require-dev": {
+        "easyswoole/swoole-ide-helper": "^1.0"
+    }
+}
