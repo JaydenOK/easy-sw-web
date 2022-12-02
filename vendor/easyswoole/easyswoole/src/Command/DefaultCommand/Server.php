@@ -44,6 +44,7 @@ class Server implements CommandInterface
         return $commandHelp;
     }
 
+    //由CommandManager 执行抽象 实现了CommandInterface exec()方法
     public function exec(): ?string
     {
         $action = CommandManager::getInstance()->getArg(0);
@@ -66,6 +67,7 @@ class Server implements CommandInterface
             $conf->setConf("MAIN_SERVER.SETTING.daemonize", $daemonize);
         }
 
+        //查找配置文件的服务类型启动。SERVER_TYPE
         $serverType = $conf->getConf('MAIN_SERVER.SERVER_TYPE');
         $displayItem = [];
         switch ($serverType) {

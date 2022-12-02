@@ -62,6 +62,7 @@ class Core
 
     protected $runMode = 'dev';
 
+    //定义配置文件dev.php, produce.php的常量：并引入EasySwooleEvent.php文件
     function __construct()
     {
         defined('SWOOLE_VERSION') or define('SWOOLE_VERSION', intval(phpversion('swoole')));
@@ -107,6 +108,7 @@ class Core
         $ret = EasySwooleEvent::mainServerCreate(ServerManager::getInstance()->getEventRegister());
         //如果返回false,说明用户希望接管全部事件
         if ($ret !== false) {
+            //系统默认
             $this->registerDefaultCallBack(ServerManager::getInstance()->getSwooleServer(), $conf['SERVER_TYPE']);
         }
         $this->extraHandler();
