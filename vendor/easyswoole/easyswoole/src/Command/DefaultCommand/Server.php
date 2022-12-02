@@ -49,6 +49,7 @@ class Server implements CommandInterface
     {
         $action = CommandManager::getInstance()->getArg(0);
         if (method_exists($this, $action) && $action != 'help') {
+            //初始化：配置，日志，错误处理
             Core::getInstance()->initialize();
             return $this->$action();
         }
@@ -76,7 +77,7 @@ class Server implements CommandInterface
                 $serverType = 'SWOOLE_SERVER';
                 break;
             }
-            case EASYSWOOLE_WEB_SERVER:
+            case EASYSWOOLE_WEB_SERVER:     //默认启动 web server
             {
                 $serverType = 'SWOOLE_WEB';
                 break;
@@ -91,6 +92,7 @@ class Server implements CommandInterface
                 $serverType = 'UNKNOWN';
             }
         }
+        //整理启动显示信息:$displayItem
         $displayItem['main server'] = $serverType;
         $displayItem['listen address'] = $conf->getConf('MAIN_SERVER.LISTEN_ADDRESS');
         $displayItem['listen port'] = $conf->getConf('MAIN_SERVER.PORT');
@@ -191,10 +193,10 @@ class Server implements CommandInterface
 
                 $final = [];
 
-                foreach ($data as $key => $val){
+                foreach ($data as $key => $val) {
                     $final[] = [
-                        'item'=>$key,
-                        'value'=>$val
+                        'item' => $key,
+                        'value' => $val
                     ];
                 }
                 return new ArrayToTextTable($final);

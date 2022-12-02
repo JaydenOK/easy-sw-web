@@ -23,6 +23,8 @@ use EasySwoole\HttpAnnotation\Utility\DocCommand;
 use EasySwoole\Phpunit\PhpunitCommand;
 
 
+//对CommandManager的上一层封装，
+
 class CommandRunner
 {
     use Singleton;
@@ -35,6 +37,9 @@ class CommandRunner
         CommandManager::getInstance()->addCommand(new Process());
         CommandManager::getInstance()->addCommand(new Server());
         CommandManager::getInstance()->addCommand(new PhpunitCommand());
+
+        //可注册自定义命令
+
         //预防日后注解库DocCommand有变动影响到主库
         if (class_exists(DocCommand::class)) {
             CommandManager::getInstance()->addCommand(new DocCommand());

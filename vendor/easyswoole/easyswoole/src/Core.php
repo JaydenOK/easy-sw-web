@@ -60,6 +60,7 @@ class Core
 {
     use Singleton;
 
+    //默认取dev.php运行配置文件，-mode=produce 指定运行配置文件produce.php
     protected $runMode = 'dev';
 
     //定义配置文件dev.php, produce.php的常量：并引入EasySwooleEvent.php文件
@@ -86,6 +87,7 @@ class Core
         return $this->runMode;
     }
 
+    //服务初始化。每个服务启动执行函数exec()调用
     function initialize()
     {
         //先加载配置文件
@@ -108,16 +110,17 @@ class Core
         $ret = EasySwooleEvent::mainServerCreate(ServerManager::getInstance()->getEventRegister());
         //如果返回false,说明用户希望接管全部事件
         if ($ret !== false) {
-            //系统默认
+            //系统默认，http，启动，停止事件
             $this->registerDefaultCallBack(ServerManager::getInstance()->getSwooleServer(), $conf['SERVER_TYPE']);
         }
+        //创建进程，启动task, crontab进程
         $this->extraHandler();
         return $this;
     }
 
     function start()
     {
-        //给主进程也命名
+        //给主进程命名
         $serverName = Config::getInstance()->getConf('SERVER_NAME');
         $this->setProcessName($serverName);
 
@@ -179,6 +182,7 @@ class Core
             $logger = new DefaultLogger(EASYSWOOLE_LOG_DIR);
         }
         $level = intval(Config::getInstance()->getConf('LOG.level'));
+        //第一次实例化，注入使用的logger实例
         Logger::getInstance($logger)->logLevel($level);
 
         $logConsole = Config::getInstance()->getConf('LOG.logConsole');
@@ -221,6 +225,7 @@ class Core
         register_shutdown_function($func);
     }
 
+    //给服务注册默认事件
     private function registerDefaultCallBack(Server $server, int $serverType)
     {
         /*
@@ -228,6 +233,7 @@ class Core
          */
         if (in_array($serverType, [EASYSWOOLE_WEB_SERVER, EASYSWOOLE_WEB_SOCKET_SERVER], true)) {
             $namespace = Di::getInstance()->get(SysConst::HTTP_CONTROLLER_NAMESPACE);
+            //web server 默认控制器
             if (empty($namespace)) {
                 $namespace = 'App\\HttpController\\';
             }
@@ -255,6 +261,7 @@ class Core
             $dispatcher->setHttpExceptionHandler($httpExceptionHandler);
             $requestHook = Di::getInstance()->get(SysConst::HTTP_GLOBAL_ON_REQUEST);
             $afterRequestHook = Di::getInstance()->get(SysConst::HTTP_GLOBAL_AFTER_REQUEST);
+            //注册http，on request 事件
             EventHelper::on($server, EventRegister::onRequest, function (SwooleRequest $request, SwooleResponse $response) use ($dispatcher, $requestHook, $afterRequestHook) {
                 $request_psr = new Request($request);
                 $response_psr = new Response($response);
@@ -353,7 +360,7 @@ class Core
     private function extraHandler()
     {
         $serverName = Config::getInstance()->getConf('SERVER_NAME');
-        //注册Task进程
+        //注册Task进程，根据配置参数
         $config = Config::getInstance()->getConf('MAIN_SERVER.TASK');
         $config = TaskManager::getInstance()->getConfig()->merge($config);
         $config->setTempDir(EASYSWOOLE_TEMP_DIR);
@@ -370,7 +377,7 @@ class Core
         //注册Crontab
         Crontab::getInstance()->getConfig()->setTempDir(EASYSWOOLE_TEMP_DIR);
         Crontab::getInstance()->getConfig()->setServerName($serverName);
-        Crontab::getInstance()->getConfig()->setOnException(function (\Throwable $throwable){
+        Crontab::getInstance()->getConfig()->setOnException(function (\Throwable $throwable) {
             Trigger::getInstance()->throwable($throwable);
         });
         Crontab::getInstance()->attachToServer($server);

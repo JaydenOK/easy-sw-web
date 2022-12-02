@@ -62,14 +62,17 @@ class SplArray extends \ArrayObject
     function get($key = null, $default = null,$target = null)
     {
         if($target == null){
+            //默认从当前配置的所有数据匹配
             $target = $this->getArrayCopy();
         }
         if (is_null($key)) {
             return $target;
         }
         $key = is_array($key) ? $key : explode('.', is_int($key) ? (string)$key : $key);
+        //$segment从第一个级开始，匹配到最后，key为null
         while (!is_null($segment = array_shift($key))) {
             if ((is_array($target) || $target instanceof \Traversable )&& isset($target[$segment])) {
+                //转换target，继续匹配第二级元素
                 $target = $target[$segment];
             } elseif (is_object($target) && isset($target->{$segment})) {
                 $target = $target->{$segment};

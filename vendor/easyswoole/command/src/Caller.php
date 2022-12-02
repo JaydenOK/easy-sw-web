@@ -6,6 +6,8 @@ namespace EasySwoole\Command;
 
 use EasySwoole\Command\AbstractInterface\CallerInterface;
 
+//命令器，保存执行命令脚本，参数信息
+
 class Caller implements CallerInterface
 {
     private $script;

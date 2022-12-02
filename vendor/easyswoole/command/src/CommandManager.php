@@ -9,6 +9,8 @@ use EasySwoole\Command\AbstractInterface\CallerInterface;
 use EasySwoole\Command\AbstractInterface\CommandInterface;
 use EasySwoole\Component\Singleton;
 
+// 命令核心管理器，处理命令实际执行逻辑 run()，注入$caller参数信息
+
 class CommandManager
 {
     use Singleton;
@@ -20,12 +22,20 @@ class CommandManager
     private $desc = 'Welcome To EasySwoole Command Console!';
 
     /**
+     * $args = [ 0 => 'start|stop|status|reload', 'key'=>'value'];
+     *
+     *
      * a b framework=easyswoole
      * @var array
      */
     private $args = [];
 
     /**
+     * 带 “-” 选项类参数
+     * $opts = ['d'=>null, 'mode' => 'produce', 'pid' => 9501];
+     *
+     *
+     *
      * --config=dev.php -d
      * @var array
      */
@@ -55,6 +65,7 @@ class CommandManager
     private $width = 1;
 
     /**
+     * 命令行原始$argv参数
      * @var array
      */
     private $originArgv = [];
@@ -77,6 +88,7 @@ class CommandManager
         // command
         $this->command = $caller->getCommand();
 
+        //移除脚本script、命令command参数后，解析其它参数,如：start 和 -d
         $this->parseArgv(array_values($argv));
 
         if (!($command = $this->command)) {
@@ -110,20 +122,23 @@ class CommandManager
     }
 
     /**
-     * @param array $params
+     *
+     * @param array $params = ['start', '-d',  '-mode=produce', '--pid=12345']
      */
     private function parseArgv(array $params)
     {
         while (false !== ($param = current($params))) {
             next($params);
             if (strpos($param, '-') === 0) {
+                //选项类参数 -d, --pid
                 $option = ltrim($param, '-');
-                $value  = null;
+                $value = null;
                 if (strpos($option, '=') !== false) {
                     [$option, $value] = explode('=', $option, 2);
                 }
                 if ($option) $this->opts[$option] = $value;
             } else if (strpos($param, '=') !== false) {
+                //键值类参数
                 [$name, $value] = explode('=', $param, 2);
                 if ($name) $this->args[$name] = $value;
             } else {
@@ -132,6 +147,7 @@ class CommandManager
         }
     }
 
+    //CommandRunner 实例化时，对其注册添加命令: CommandManager::getInstance()->addCommand(new Server());
     public function addCommand(CommandInterface $handler)
     {
         $command = $handler->commandName();
@@ -146,7 +162,7 @@ class CommandManager
 
     public function displayAlternativesHelp($command): string
     {
-        $text         = "The command '{$command}' is not exists!\n";
+        $text = "The command '{$command}' is not exists!\n";
         $commandNames = array_keys($this->commands);
         $alternatives = [];
         foreach ($commandNames as $commandName) {
@@ -155,7 +171,7 @@ class CommandManager
                 $alternatives[$commandName] = $lev;
             }
         }
-        $threshold    = 1e3;
+        $threshold = 1e3;
         $alternatives = array_filter($alternatives, function ($lev) use ($threshold) {
             return $lev < 2 * $threshold;
         });
@@ -185,8 +201,8 @@ class CommandManager
 
         $fullCmd = $this->script . " " . $handler->commandName();
 
-        $desc  = $handler->desc() ? ucfirst($handler->desc()) : 'No description for the command';
-        $desc  = "<brown>$desc</brown>";
+        $desc = $handler->desc() ? ucfirst($handler->desc()) : 'No description for the command';
+        $desc = "<brown>$desc</brown>";
         $usage = "<cyan>$fullCmd ACTION</cyan> [--opts ...]";
 
         $nodes = [
@@ -203,22 +219,22 @@ class CommandManager
 
         $helpMsg .= "<brown>Actions:</brown>\n";
 
-        $actions     = $commandHelp->getActions();
+        $actions = $commandHelp->getActions();
         $actionWidth = $commandHelp->getActionWidth();
 
         if (empty($actions)) $helpMsg .= "\n";
         foreach ($actions as $name => $desc) {
-            $name    = str_pad($name, $actionWidth, ' ');
+            $name = str_pad($name, $actionWidth, ' ');
             $helpMsg .= "  <green>$name</green>  $desc\n";
         }
 
         $helpMsg .= "<brown>Options:</brown>\n";
 
-        $opts     = $commandHelp->getOpts();
+        $opts = $commandHelp->getOpts();
         $optWidth = $commandHelp->getOptWidth();
 
         foreach ($opts as $name => $desc) {
-            $name    = str_pad($name, $optWidth, ' ');
+            $name = str_pad($name, $optWidth, ' ');
             $helpMsg .= "  <green>$name</green>  $desc\n";
         }
 
@@ -230,7 +246,7 @@ class CommandManager
     public function displayHelp()
     {
         // help
-        $desc  = ucfirst($this->desc) . "\n";
+        $desc = ucfirst($this->desc) . "\n";
         $usage = "<cyan>{$this->script} COMMAND -h</cyan>";
 
         $help = "<brown>{$desc}Usage:</brown>" . " $usage\n<brown>Commands:</brown>\n";
@@ -243,8 +259,8 @@ class CommandManager
          */
         foreach ($data as $command => $handler) {
             $command = str_pad($command, $this->width, ' ');
-            $desc    = $handler->desc() ? ucfirst($handler->desc()) : 'No description for the command';
-            $help    .= "  <green>$command</green>  $desc\n";
+            $desc = $handler->desc() ? ucfirst($handler->desc()) : 'No description for the command';
+            $help .= "  <green>$command</green>  $desc\n";
         }
 
         $help .= "\nFor command usage please run: $usage\n";
