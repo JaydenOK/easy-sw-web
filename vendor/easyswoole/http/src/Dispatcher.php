@@ -45,6 +45,7 @@ class Dispatcher
         $this->maxDepth = $maxDepth;
     }
 
+    //默认： 'App\\HttpController\\';
     function setNamespacePrefix(string $space):Dispatcher
     {
         $this->namespacePrefix = trim($space,'\\');
@@ -85,6 +86,7 @@ class Dispatcher
     {
         // 进行一次初始化判定
         if($this->router === null){
+            //存在App/HttpController/Router.php 则进行路由解析
             $r = $this->initRouter( $this->namespacePrefix.'\\Router');
             if($r instanceof AbstractRouter){
                 if (is_callable($this->onRouterCreate)) {
@@ -101,10 +103,10 @@ class Dispatcher
                 $this->router = false;
             }
         }
-
         $path = UrlParser::pathInfo($request->getUri()->getPath());
         if($this->router instanceof GroupCountBased){
             if($this->routerRegister->isPathInfoMode()){
+                //增加直接pathinfo解析
                 $routerPath = $path;
             }else{
                 $routerPath = $request->getUri()->getPath();

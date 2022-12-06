@@ -47,6 +47,7 @@ abstract class AbstractProcess
             $enableCoroutine = (bool)array_shift($args) ?: false;
             $this->config->setEnableCoroutine($enableCoroutine);
         }
+        //创建swoole Process 用户自定义进程，由Manager添加的TCP服务器上
         $this->swooleProcess = new Process([$this,'__start'],$this->config->isRedirectStdinStdout(),$this->config->getPipeType(),$this->config->isEnableCoroutine());
         Manager::getInstance()->addProcess($this,false);
     }
@@ -87,6 +88,8 @@ abstract class AbstractProcess
 
     function __start(Process $process)
     {
+        //当前$process 用户进程
+        //主进程table内存表 $table
         $table = Manager::getInstance()->getProcessTable();
         $table->set($process->pid,[
             'pid'=>$process->pid,
@@ -95,6 +98,8 @@ abstract class AbstractProcess
             'startUpTime'=>time(),
             "hash"=>spl_object_hash($this->getProcess())
         ]);
+        //用户进程内应当进行 while(true)(如下边的示例) 或 EventLoop 循环 (例如创建个定时器)，否则用户进程会不停地退出重启
+        // 每秒记录内存使用情况
         \Swoole\Timer::tick(1*1000,function ()use($table,$process){
             $table->set($process->pid,[
                 'memoryUsage'=>memory_get_usage(),
@@ -104,6 +109,7 @@ abstract class AbstractProcess
         if(!in_array(PHP_OS,['Darwin','CYGWIN','WINNT']) && !empty($this->getProcessName())){
             $process->name($this->getProcessName());
         }
+        //以下为事件发生时，回调子类业务方法
         swoole_event_add($this->swooleProcess->pipe, function(){
             try{
                 $this->onPipeReadable($this->swooleProcess);
@@ -146,6 +152,7 @@ abstract class AbstractProcess
             \Swoole\Timer::clearAll();
             Event::exit();
         });
+        //创建进程后，执行run抽象类方法(具体业务代码)
         try{
             $this->run($this->config->getArg());
         }catch (\Throwable $throwable){

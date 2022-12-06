@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * 进程管理器，自定义进程
+ */
 
 namespace EasySwoole\Component\Process;
 

@@ -23,6 +23,7 @@ class Response extends MessageResponse
     private $isEndResponse = self::STATUS_NOT_END;//1 逻辑end  2真实end 3分离响应
     private $isChunk = false;
 
+    //注入 Swoole Response实例
     final public function __construct(\Swoole\Http\Response $response = null)
     {
         $this->response = $response;

@@ -11,6 +11,7 @@ use Swoole\Coroutine;
 use Swoole\Coroutine\Socket;
 use Swoole\Table;
 
+//父构造函数。new Process()， 回调函数：$this->__start();
 class Worker extends AbstractUnixProcess
 {
     protected $workerIndex;

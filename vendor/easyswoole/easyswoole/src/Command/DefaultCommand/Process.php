@@ -58,6 +58,7 @@ class Process implements CommandInterface
 
             $result = CommandManager::getInstance()->displayCommandHelp($this->commandName());
         });
+        //开始执行协程
         $run->start();
         return $result;
     }

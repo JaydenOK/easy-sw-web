@@ -1,6 +1,9 @@
 <?php
 /**
  * easyswoole文件的php副本
+ * http服务，启动 web-server，监听端口，注册回调 onRequest 事件，根据路由，dispatcher，再执行具体的路由 （方法逻辑：Code->registerDefaultCallBack()）
+ *
+ *
  */
 
 use EasySwoole\EasySwoole\Command\CommandRunner;

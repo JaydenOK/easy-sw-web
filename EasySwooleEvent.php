@@ -36,7 +36,7 @@ class EasySwooleEvent implements Event
         DbManager::getInstance()->addConnection(new Connection($config));
 
         // 设置指定连接名称 后期可通过连接名称操作不同的数据库
-        DbManager::getInstance()->addConnection(new Connection($config), 'write');
+        //DbManager::getInstance()->addConnection(new Connection($config), 'write');
 
 
         // 给 server 注册相关事件，在 WebSocket 服务模式下 message 事件必须注册
@@ -44,22 +44,23 @@ class EasySwooleEvent implements Event
 //        $register->set($register::onMessage,function (\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame){
 //        });
 
-        //创建自定义进程
-//        $processConfig = new \EasySwoole\Component\Process\Config([
-//            'processName' => 'CustomProcess', // 设置 进程名称为 TickProcess
-//            'processGroup' => 'Custom', // 设置 进程组名称为 Tick
-//            'arg' => [
-//                'arg1' => 'this is arg1!',
-//            ], // 传递参数到自定义进程中
-//            'enableCoroutine' => true, // 设置 自定义进程自动开启协程环境
-//        ]);
-//        // 【推荐】使用 \EasySwoole\Component\Process\Manager 类注册自定义进程
-//        $customProcess = (new \App\Process\CustomProcess($processConfig));
-//        // 【可选操作】把 tickProcess 的 Swoole\Process 注入到 Di 中，方便在后续控制器等业务中给自定义进程传输信息(即实现主进程与自定义进程间通信)
-//        \EasySwoole\Component\Di::getInstance()->set('customSwooleProcess', $customProcess->getProcess());
-//        // 注册进程
-//        \EasySwoole\Component\Process\Manager::getInstance()->addProcess($customProcess);
-
+        //================= 创建自定义进程 start =================
+        $processConfig = new \EasySwoole\Component\Process\Config([
+            'processName' => 'AsyncMessageProcess', // 设置 进程名称
+            'processGroup' => 'AsyncMessageProcess', // 设置 进程组名称
+            'arg' => [
+                'arg1' => '123',
+            ],
+            // 传递参数到自定义进程中
+            'enableCoroutine' => true, // 设置 自定义进程自动开启协程环境
+        ]);
+        // 【推荐】使用 \EasySwoole\Component\Process\Manager 类注册自定义进程
+        $asyncMessageProcess = (new \App\Process\AsyncMessageProcess($processConfig));
+        // 【可选操作】把 tickProcess 的 Swoole\Process 注入到 Di 中，方便在后续控制器等业务中给自定义进程传输信息(即实现主进程与自定义进程间通信)
+        \EasySwoole\Component\Di::getInstance()->set('AsyncMessageProcess', $asyncMessageProcess->getProcess());
+        // 注册进程
+        \EasySwoole\Component\Process\Manager::getInstance()->addProcess($asyncMessageProcess);
+        //================= 创建自定义进程 end =================
 
         // 实现 onRequest 事件
         \EasySwoole\Component\Di::getInstance()->set(\EasySwoole\EasySwoole\SysConst::HTTP_GLOBAL_ON_REQUEST, function (\EasySwoole\Http\Request $request, \EasySwoole\Http\Response $response): bool {

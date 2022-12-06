@@ -113,7 +113,7 @@ class Core
             //系统默认，http，启动，停止事件
             $this->registerDefaultCallBack(ServerManager::getInstance()->getSwooleServer(), $conf['SERVER_TYPE']);
         }
-        //创建进程，启动task, crontab进程
+        //创建进程(自定义进程 addProcess)，启动task, crontab进程
         $this->extraHandler();
         return $this;
     }
