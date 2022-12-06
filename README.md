@@ -31,8 +31,6 @@ temp dir                      /root/easy_sw_web/Temp
 log dir                       /root/easy_sw_web/Log
 
 [root@ac_web easy_sw_web]# php easyswoole process show
-[2022-12-06 18:03:32][trigger][warning]:[Division by zero at file:/root/easy_sw_web/vendor/easyswoole/easyswoole/src/Command/DefaultCommand/Process.php line:119]
-[2022-12-06 18:03:32][trigger][warning]:[Division by zero at file:/root/easy_sw_web/vendor/easyswoole/easyswoole/src/Command/DefaultCommand/Process.php line:120]
 ┌───────┬─────────────────────────┬───────────────────────┬─────────────┬─────────────────┬─────────────────────┬──────────────────────────────────┐
 │  pid  │          name           │         group         │ memoryUsage │ memoryPeakUsage │     startUpTime     │               hash               │
 ├───────┼─────────────────────────┼───────────────────────┼─────────────┼─────────────────┼─────────────────────┼──────────────────────────────────┤
