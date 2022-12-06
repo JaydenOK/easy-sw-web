@@ -1,20 +1,39 @@
 <?php
-//自定义进程
+
 namespace App\Process;
 
+use App\Utils\RabbitMQClient;
 use EasySwoole\Component\Process\AbstractProcess;
 use Swoole\Process;
 
-class CustomProcess extends AbstractProcess
+class AsyncMessageProcess extends AbstractProcess
 {
     protected function run($arg)
     {
+        //easyswoole 异步消息服务
+        go(function () {
+            $rabbitMQClient = new RabbitMQClient();
+            $queueName = 'aaa';
+            $callback = function ($body) {
+                echo date('[Y-m-d H:i:s]') . print_r($body, true) . PHP_EOL;
+                sleep(1);
+                //return true 确认消息
+                return true;
+            };
+            try {
+                //阻塞消费消息
+                $rabbitMQClient->consume($callback, $queueName);
+            } catch (\Exception $e) {
+                echo date('[Y-m-d H:i:s]') . 'exception:' . $e->getMessage() . PHP_EOL;
+            }
+        });
+
+
         // TODO: Implement run() method.
         $processName = $this->getProcessName(); // 获取 注册进程名称
         $swooleProcess = $this->getProcess(); // 获取 注册进程的实例 \Swoole\Process
         $processPid = $this->getPid(); // 获取 当前进程 Pid
         $args = $this->getArg(); // 获取 注册进程时传递的参数
-
         var_dump('### 开始运行自定义进程 start ###');
         var_dump($processName, $swooleProcess, $processPid, $args);
         var_dump('### 运行自定义进程结束 end ###');
