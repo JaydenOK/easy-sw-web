@@ -12,6 +12,7 @@ use EasySwoole\ORM\Db\Connection;
 
 class EasySwooleEvent implements Event
 {
+
     //实际服务类exe()方法，执行前执行，然后再执行具体的方法 $this->start(); 在此时只初始化了配置
     //Core::getInstance()->initialize();
     //return $this->$action();
@@ -19,7 +20,7 @@ class EasySwooleEvent implements Event
     {
         date_default_timezone_set('Asia/Shanghai');
 
-        ###### 注册 mysql orm 连接池 ######
+        //================= 注册 mysql orm 连接池 =================
         $config = new \EasySwoole\ORM\Db\Config(\EasySwoole\EasySwoole\Config::getInstance()->getConf('MYSQL'));
         // 【可选操作】我们已经在 dev.php 中进行了配置
         $config->setMinObjectNum(5)->setMaxObjectNum(20); // 配置连接池数量
@@ -29,7 +30,7 @@ class EasySwooleEvent implements Event
         DbManager::getInstance()->addConnection($ormConnection, 'main');
 
 
-        ###### 注册 redis 连接池 ######
+        //=================  注册redis连接池  =================
         $config = new \EasySwoole\Pool\Config();
         $redisConfig1 = new \EasySwoole\Redis\Config\RedisConfig(Config::getInstance()->getConf('REDIS'));
         // 注册连接池管理对象
@@ -42,7 +43,8 @@ class EasySwooleEvent implements Event
     //swoole服务器启动前执行，在此时已经new \Swoole\Server()，但未 $server->start().
     public static function mainServerCreate(EventRegister $register)
     {
-        //mysql连接预热
+
+        //================= mysql连接池预热，先初始化连接  =================
         $register->add($register::onWorkerStart, function () {
             // 链接预热
             // ORM 1.4.31 版本之前请使用 getClientPool()
@@ -50,10 +52,6 @@ class EasySwooleEvent implements Event
             DbManager::getInstance()->getConnection('main')->__getClientPool()->keepMin();
         });
 
-        // 给 server 注册相关事件，在 WebSocket 服务模式下 message 事件必须注册
-        /** @var \EasySwoole\EasySwoole\Swoole\EventRegister $register * */
-//        $register->set($register::onMessage,function (\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame){
-//        });
 
         //================= 创建自定义进程 start =================
         $processConfig = new \EasySwoole\Component\Process\Config([
@@ -71,9 +69,9 @@ class EasySwooleEvent implements Event
         \EasySwoole\Component\Di::getInstance()->set('AsyncMessageProcess', $asyncMessageProcess->getProcess());
         // 注册进程
         \EasySwoole\Component\Process\Manager::getInstance()->addProcess($asyncMessageProcess);
-        //================= 创建自定义进程 end =================
 
-        // 实现 onRequest 事件
+
+        //=================   实现 onRequest 事件  =================
         \EasySwoole\Component\Di::getInstance()->set(\EasySwoole\EasySwoole\SysConst::HTTP_GLOBAL_ON_REQUEST, function (\EasySwoole\Http\Request $request, \EasySwoole\Http\Response $response): bool {
             ###### 对请求进行拦截 ######
 
@@ -90,7 +88,7 @@ class EasySwooleEvent implements Event
         });
 
 
-        // 实现 afterRequest 事件
+        //=================   实现 afterRequest 事件  =================
         \EasySwoole\Component\Di::getInstance()->set(\EasySwoole\EasySwoole\SysConst::HTTP_GLOBAL_AFTER_REQUEST, function (\EasySwoole\Http\Request $request, \EasySwoole\Http\Response $response): void {
 
             // 示例：获取此次请求响应的内容
@@ -104,6 +102,11 @@ class EasySwooleEvent implements Event
 //            TrackerManager::getInstance()->closeTracker();
         });
 
+
+        //================= 给 server 注册相关事件，在 WebSocket 服务模式下 message 事件必须注册  =================
+        /** @var \EasySwoole\EasySwoole\Swoole\EventRegister $register * */
+//        $register->set($register::onMessage,function (\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame){
+//        });
 
     }
 
