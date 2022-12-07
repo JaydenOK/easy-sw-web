@@ -10,6 +10,7 @@ use EasySwoole\Pool\AbstractPool;
 
 class MysqlPool extends AbstractPool
 {
+    //实现抽象方法，返回对应mysql实例
     protected function createObject()
     {
         /** @var Config $config */

@@ -14,6 +14,7 @@ use Swoole\Timer;
 
 abstract class AbstractPool
 {
+    //已创建连接数
     private $createdNum = 0;
     /** @var Channel */
     private $poolChannel;
@@ -45,17 +46,17 @@ abstract class AbstractPool
         }
         $this->conf = $conf;
         $this->statusTable = new Table(1024);
-        $this->statusTable->column('created',Table::TYPE_INT,10);
-        $this->statusTable->column('pid',Table::TYPE_INT,10);
-        $this->statusTable->column('inuse',Table::TYPE_INT,10);
-        $this->statusTable->column('loadWaitTimes',Table::TYPE_FLOAT,10);
-        $this->statusTable->column('loadUseTimes',Table::TYPE_INT,10);
-        $this->statusTable->column('lastAliveTime',Table::TYPE_INT,10);
+        $this->statusTable->column('created', Table::TYPE_INT, 10);
+        $this->statusTable->column('pid', Table::TYPE_INT, 10);
+        $this->statusTable->column('inuse', Table::TYPE_INT, 10);
+        $this->statusTable->column('loadWaitTimes', Table::TYPE_FLOAT, 10);
+        $this->statusTable->column('loadUseTimes', Table::TYPE_INT, 10);
+        $this->statusTable->column('lastAliveTime', Table::TYPE_INT, 10);
         $this->statusTable->create();
-        $this->poolHash = substr(md5(spl_object_hash($this).getmypid()),8,16);
+        $this->poolHash = substr(md5(spl_object_hash($this) . getmypid()), 8, 16);
     }
 
-    function getUsedObjects():array
+    function getUsedObjects(): array
     {
         return $this->inUseObject;
     }
@@ -114,7 +115,7 @@ abstract class AbstractPool
     public function getObj(float $timeout = null, int $tryTimes = 3)
     {
         /*
-        * 懒惰模式，可以提前创建 pool对象，因此调用钱执行初始化检测
+        * 懒惰模式，可以提前创建 pool对象，因此调用前执行初始化检测
         */
         $this->init();
         /*
@@ -144,8 +145,8 @@ abstract class AbstractPool
         $take = microtime(true) - $start;
         // getObj 记录取出等待时间 5s周期内
         $this->loadWaitTimes += $take;
-        $this->statusTable->set($this->poolHash(),[
-            'loadWaitTimes'=>$this->loadWaitTimes
+        $this->statusTable->set($this->poolHash(), [
+            'loadWaitTimes' => $this->loadWaitTimes
         ]);
         if (is_object($object)) {
             $hash = $object->__objHash;
@@ -176,7 +177,7 @@ abstract class AbstractPool
             }
             // 每次getObj 记录该连接池取出的次数 5s周期内
             $this->loadUseTimes++;
-            $this->statusTable->incr($this->poolHash(),'loadUseTimes');
+            $this->statusTable->incr($this->poolHash(), 'loadUseTimes');
             return $object;
         } else {
             return null;
@@ -207,11 +208,11 @@ abstract class AbstractPool
                     throw $throwable;
                 } finally {
                     $this->createdNum--;
-                    $this->statusTable->decr($this->poolHash(),'created');
+                    $this->statusTable->decr($this->poolHash(), 'created');
                 }
             } else {
                 $this->createdNum--;
-                $this->statusTable->decr($this->poolHash(),'created');
+                $this->statusTable->decr($this->poolHash(), 'created');
             }
             return true;
         } else {
@@ -232,7 +233,7 @@ abstract class AbstractPool
         while (!$this->poolChannel->isEmpty() && $size >= 0) {
             $size--;
             $item = $this->poolChannel->pop(0.01);
-            if(!$item){
+            if (!$item) {
                 continue;
             }
             //回收超时没有使用的链接
@@ -243,13 +244,13 @@ abstract class AbstractPool
                 $this->unsetObj($item);
             } else {
                 //执行itemIntervalCheck检查
-                if(!$this->itemIntervalCheck($item)){
+                if (!$this->itemIntervalCheck($item)) {
                     //标记为不在队列内，允许进行gc回收
                     $hash = $item->__objHash;
                     $this->objHash[$hash] = false;
                     $this->unsetObj($item);
                     continue;
-                }else{
+                } else {
                     $this->poolChannel->push($item);
                 }
             }
@@ -262,17 +263,17 @@ abstract class AbstractPool
     public function intervalCheck()
     {
         //删除死去的进程状态
-        $this->statusTable->set($this->poolHash(),[
-            'lastAliveTime'=>time()
+        $this->statusTable->set($this->poolHash(), [
+            'lastAliveTime' => time()
         ]);
         $list = [];
         $time = time();
-        foreach ($this->statusTable as $key => $item){
-            if($time - $item['lastAliveTime'] >= 2){
+        foreach ($this->statusTable as $key => $item) {
+            if ($time - $item['lastAliveTime'] >= 2) {
                 $list[] = $key;
             }
         }
-        foreach ($list as $key){
+        foreach ($list as $key) {
             $this->statusTable->del($key);
         }
 
@@ -284,7 +285,7 @@ abstract class AbstractPool
      * @param $item $item->__lastUseTime 属性表示该对象被最后一次使用的时间
      * @return bool
      */
-    protected function itemIntervalCheck($item):bool
+    protected function itemIntervalCheck($item): bool
     {
         return true;
     }
@@ -294,7 +295,7 @@ abstract class AbstractPool
     */
     public function keepMin(?int $num = null): int
     {
-        if($num == null){
+        if ($num == null) {
             $num = $this->getConfig()->getMinObjectNum();
         }
         if ($this->createdNum < $num) {
@@ -318,37 +319,39 @@ abstract class AbstractPool
         return $this->conf;
     }
 
-    public function status(bool $currentWorker = false):array
+    public function status(bool $currentWorker = false): array
     {
-        if($currentWorker){
+        if ($currentWorker) {
             return $this->statusTable->get($this->poolHash());
-        }else{
+        } else {
             $data = [];
-            foreach ($this->statusTable as $key => $value){
+            foreach ($this->statusTable as $key => $value) {
                 $data[] = $value;
             }
             return $data;
         }
     }
 
+    //初始化连接池的连接（启动或者获取的时候调用）
     private function initObject(): bool
     {
         if ($this->destroy) {
             return false;
         }
         /*
-        * 懒惰模式，可以提前创建 pool对象，因此调用钱执行初始化检测
+        * 懒惰模式，可以提前创建 pool对象，因此调用前执行初始化检测
         */
         $this->init();
         $obj = null;
         $this->createdNum++;
-        $this->statusTable->incr($this->poolHash(),'created');
+        $this->statusTable->incr($this->poolHash(), 'created');
         if ($this->createdNum > $this->getConfig()->getMaxObjectNum()) {
             $this->createdNum--;
-            $this->statusTable->decr($this->poolHash(),'created');
+            $this->statusTable->decr($this->poolHash(), 'created');
             return false;
         }
         try {
+            //获取实际连接对象，抽象方法，保存通道poolChannel
             $obj = $this->createObject();
             if (is_object($obj)) {
                 $hash = Random::character(12);
@@ -359,11 +362,11 @@ abstract class AbstractPool
                 return true;
             } else {
                 $this->createdNum--;
-                $this->statusTable->decr($this->poolHash(),'created');
+                $this->statusTable->decr($this->poolHash(), 'created');
             }
         } catch (\Throwable $throwable) {
             $this->createdNum--;
-            $this->statusTable->decr($this->poolHash(),'created');
+            $this->statusTable->decr($this->poolHash(), 'created');
             throw $throwable;
         }
         return false;
@@ -406,12 +409,12 @@ abstract class AbstractPool
             $this->loadAverageTimerId = null;
         }
 
-        if($this->poolChannel){
+        if ($this->poolChannel) {
             while (!$this->poolChannel->isEmpty()) {
                 $item = $this->poolChannel->pop(0.01);
                 $this->unsetObj($item);
             }
-            foreach ($this->inUseObject as $item){
+            foreach ($this->inUseObject as $item) {
                 $this->unsetObj($item);
                 $this->inUseObject = [];
             }
@@ -421,10 +424,10 @@ abstract class AbstractPool
         }
 
         $list = [];
-        foreach ($this->statusTable as $key => $value){
+        foreach ($this->statusTable as $key => $value) {
             $list[] = $key;
         }
-        foreach ($list as $key){
+        foreach ($list as $key) {
             $this->statusTable->del($key);
         }
     }
@@ -456,15 +459,19 @@ abstract class AbstractPool
         }
     }
 
+    //获取连接池一个连接，并协程执行完后自动释放，当前协程上使用
     public function defer(float $timeout = null)
     {
+        //获取当前协程的唯一 ID, 它的别名为 getuid, 是一个进程内唯一的正整数。
         $cid = Coroutine::getCid();
+        //当前协程存在连接，直接return，不存在，获取连接对象，再递归return
         if (isset($this->context[$cid])) {
             return $this->context[$cid];
         }
         $obj = $this->getObj($timeout);
         if ($obj) {
             $this->context[$cid] = $obj;
+            //defer 用于资源的释放，会在协程关闭之前 (即协程函数执行完毕时) 进行调用，就算抛出了异常，已注册的 defer 也会被执行。
             Coroutine::defer(function () use ($cid) {
                 if (isset($this->context[$cid])) {
                     $obj = $this->context[$cid];
@@ -472,43 +479,46 @@ abstract class AbstractPool
                     $this->recycleObj($obj);
                 }
             });
+            //递归return
             return $this->defer($timeout);
         } else {
             throw new PoolEmpty(static::class . " pool is empty");
         }
     }
 
+    //维持连接池最低连接数方法，懒惰模式，可以提前创建 pool对象，因此调用前执行初始化检测
     private function init()
     {
         if ((!$this->poolChannel) && (!$this->destroy)) {
+            //初始化通道，最大数+8
             $this->poolChannel = new Channel($this->conf->getMaxObjectNum() + 8);
             if ($this->conf->getIntervalCheckTime() > 0) {
                 $this->intervalCheckTimerId = Timer::tick($this->conf->getIntervalCheckTime(), [$this, 'intervalCheck']);
             }
-            $this->loadAverageTimerId = Timer::tick(5*1000,function (){
+            $this->loadAverageTimerId = Timer::tick(5 * 1000, function () {
                 // 5s 定时检测
                 $loadWaitTime = $this->loadWaitTimes;
                 $loadUseTimes = $this->loadUseTimes;
                 $this->loadUseTimes = 0;
                 $this->loadWaitTimes = 0;
-                $this->statusTable->set($this->poolHash(),[
-                    'loadWaitTimes'=>0,
-                    'loadUseTimes'=>0
+                $this->statusTable->set($this->poolHash(), [
+                    'loadWaitTimes' => 0,
+                    'loadUseTimes' => 0
                 ]);
                 //避免分母为0
-                if($loadUseTimes <= 0){
+                if ($loadUseTimes <= 0) {
                     $loadUseTimes = 1;
                 }
-                $average = $loadWaitTime/$loadUseTimes; // average 记录的是平均每个链接取出的时间
-                if($this->getConfig()->getLoadAverageTime() > $average){
+                $average = $loadWaitTime / $loadUseTimes; // average 记录的是平均每个链接取出的时间
+                if ($this->getConfig()->getLoadAverageTime() > $average) {
                     //负载小。尝试回收链接百分之5的链接
                     $decNum = intval($this->createdNum * 0.05);
-                    if( ($this->createdNum - $decNum) > $this->getConfig()->getMinObjectNum()){
-                        while ($decNum > 0){
-                            $temp = $this->getObj(0.001,0);
-                            if($temp){
+                    if (($this->createdNum - $decNum) > $this->getConfig()->getMinObjectNum()) {
+                        while ($decNum > 0) {
+                            $temp = $this->getObj(0.001, 0);
+                            if ($temp) {
                                 $this->unsetObj($temp);
-                            }else{
+                            } else {
                                 break;
                             }
                             $decNum--;
@@ -517,18 +527,18 @@ abstract class AbstractPool
                 }
             });
             //table记录初始化
-            $this->statusTable->set($this->poolHash(),[
-                'pid'=>getmypid(),
-                'created'=>0,
-                'inuse'=>0,
-                'loadWaitTimes'=>0,
-                'loadUseTimes'=>0,
-                'lastAliveTime'=>0
+            $this->statusTable->set($this->poolHash(), [
+                'pid' => getmypid(),
+                'created' => 0,
+                'inuse' => 0,
+                'loadWaitTimes' => 0,
+                'loadUseTimes' => 0,
+                'lastAliveTime' => 0
             ]);
         }
     }
 
-    function poolHash():string
+    function poolHash(): string
     {
         return $this->poolHash;
     }

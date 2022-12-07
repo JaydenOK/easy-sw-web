@@ -12,6 +12,7 @@ use EasySwoole\Pool\Exception\PoolEmpty;
 use Swoole\Coroutine;
 
 /**
+ * DbManager采用单例，注意：进程间数据是隔离的。
  * Class DbManager
  * @package EasySwoole\ORM
  */

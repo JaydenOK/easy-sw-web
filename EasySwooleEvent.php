@@ -8,36 +8,47 @@ use EasySwoole\EasySwoole\AbstractInterface\Event;
 use EasySwoole\EasySwoole\Swoole\EventRegister;
 use EasySwoole\ORM\DbManager;
 use EasySwoole\ORM\Db\Connection;
-use EasySwoole\ORM\Db\Config;
 
 
 class EasySwooleEvent implements Event
 {
-    //实际服务类exe()方法，执行前执行，然后再执行具体的方法 $this->start();
+    //实际服务类exe()方法，执行前执行，然后再执行具体的方法 $this->start(); 在此时只初始化了配置
     //Core::getInstance()->initialize();
     //return $this->$action();
     public static function initialize()
     {
         date_default_timezone_set('Asia/Shanghai');
+
+        ###### 注册 mysql orm 连接池 ######
+        $config = new \EasySwoole\ORM\Db\Config(\EasySwoole\EasySwoole\Config::getInstance()->getConf('MYSQL'));
+        // 【可选操作】我们已经在 dev.php 中进行了配置
+        $config->setMinObjectNum(5)->setMaxObjectNum(20); // 配置连接池数量
+        //DbManager::getInstance()->addConnection(new Connection($config));
+        // 设置指定连接名称 后期可通过连接名称操作不同的数据库
+        $ormConnection = new Connection($config);
+        DbManager::getInstance()->addConnection($ormConnection, 'main');
+
+
+        ###### 注册 redis 连接池 ######
+        $config = new \EasySwoole\Pool\Config();
+        $redisConfig1 = new \EasySwoole\Redis\Config\RedisConfig(Config::getInstance()->getConf('REDIS'));
+        // 注册连接池管理对象
+        \EasySwoole\Pool\Manager::getInstance()->register(new \App\Pool\RedisPool($config, $redisConfig1), 'redis');
+
+
     }
 
     //Core->createServer()方法，执行 $ret = EasySwooleEvent::mainServerCreate(ServerManager::getInstance()->getEventRegister());
-    //swoole服务器启动前执行
+    //swoole服务器启动前执行，在此时已经new \Swoole\Server()，但未 $server->start().
     public static function mainServerCreate(EventRegister $register)
     {
-        //注册数据库连接配置
-        $config = new Config();
-        $config->setDatabase('yibai_account_manage');
-        $config->setUser('appuser');
-        $config->setPassword('adf2FASFAS');
-        $config->setHost('192.168.92.209');
-        $config->setTimeout(15); // 超时时间
-
-        DbManager::getInstance()->addConnection(new Connection($config));
-
-        // 设置指定连接名称 后期可通过连接名称操作不同的数据库
-        //DbManager::getInstance()->addConnection(new Connection($config), 'write');
-
+        //mysql连接预热
+        $register->add($register::onWorkerStart, function () {
+            // 链接预热
+            // ORM 1.4.31 版本之前请使用 getClientPool()
+            // __getClientPool : \EasySwoole\ORM\Db\MysqlPool
+            DbManager::getInstance()->getConnection('main')->__getClientPool()->keepMin();
+        });
 
         // 给 server 注册相关事件，在 WebSocket 服务模式下 message 事件必须注册
         /** @var \EasySwoole\EasySwoole\Swoole\EventRegister $register * */

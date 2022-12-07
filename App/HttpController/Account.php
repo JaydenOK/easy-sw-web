@@ -4,6 +4,10 @@ namespace App\HttpController;
 
 use App\Model\AmazonAccount;
 use EasySwoole\Http\AbstractInterface\Controller;
+use EasySwoole\Mysqli\QueryBuilder;
+use EasySwoole\ORM\DbManager;
+use EasySwoole\ORM\Exception\Exception;
+use EasySwoole\Pool\Exception\PoolEmpty;
 
 class Account extends Controller
 {
@@ -19,6 +23,94 @@ class Account extends Controller
         $this->response()->write($data . PHP_EOL);
         return;
     }
+
+    //http://192.168.92.208:9511/Account/mysqlPoolTest
+    //使用mysql连接池
+    public function mysqlPoolTest()
+    {
+        $platformCode = $this->request()->getQueryParam('platform_code');
+        // 获取连接池
+        $connection = DbManager::getInstance()->getConnection('main');
+        //defer($timeout)参数为空 默认获取config的timeout，此方法会自动回收对象，用户无需关心。
+        $timeout = null;
+        //即 createObject()对象
+        /**
+         * @var  $mysqlClient \EasySwoole\ORM\Db\MysqliClient
+         */
+        $mysqlClient = $connection->defer($timeout);
+        try {
+            $builder = $mysqlClient->queryBuilder()
+                ->where('account_status', 10)
+                ->limit(20)
+                ->get('yibai_amazon_account');
+            // 返回给客户端
+            var_dump($builder->getLastQuery());
+            $result = $mysqlClient->execBuilder();
+            $this->response()->write(json_encode($result, JSON_UNESCAPED_UNICODE));
+        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+        }
+        return;
+    }
+
+    public function mysqlPoolTransaction()
+    {
+        try {
+            \EasySwoole\ORM\DbManager::getInstance()->startTransaction();
+            \EasySwoole\ORM\DbManager::getInstance()->commit();
+            \EasySwoole\ORM\DbManager::getInstance()->rollback();
+        } catch (Exception $e) {
+        } catch (PoolEmpty $e) {
+        } catch (\Throwable $e) {
+        }
+    }
+
+    //使用invoke方式，让ORM查询结束后马上归还资源，可以提高资源的利用率。
+    public function mysqlPoolInvoke()
+    {
+        \EasySwoole\ORM\DbManager::getInstance()->invoke(function (\EasySwoole\ORM\Db\ClientInterface $client) {
+
+            \EasySwoole\ORM\DbManager::getInstance()->startTransaction($client);
+            \EasySwoole\ORM\DbManager::getInstance()->commit($client);
+            \EasySwoole\ORM\DbManager::getInstance()->rollback($client);
+
+            //查询该连接是否处于事务上下文
+            /** @var \EasySwoole\ORM\Db\ClientInterface $client * */
+            \EasySwoole\ORM\DbManager::isInTransaction($client);
+        });
+
+
+    }
+
+    //http://192.168.92.208:9511/Account/redisPoolTest
+    //使用redis连接池
+    public function redisPoolTest()
+    {
+        // 取出连接池管理对象，然后获取连接对象（getObject）
+        $redis = \EasySwoole\Pool\Manager::getInstance()->get('redis')->getObj();
+        $key = 'test_username';
+        $redis->set($key, '仙士可123abc');
+        $data = $redis->get($key);
+        // 回收连接对象（将连接对象重新归还到连接池，方便后续使用）
+        \EasySwoole\Pool\Manager::getInstance()->get('redis')->recycleObj($redis);
+
+        // 释放连接对象（将连接对象直接彻底释放，后续不再使用）
+        // \EasySwoole\Pool\Manager::getInstance()->get('redis1')->unsetObj($redis1);
+
+        $this->response()->write($data . PHP_EOL);
+    }
+
+
+    public function test()
+    {
+        go(function () {
+            $redisPool = new \App\Pool\RedisPool(new \EasySwoole\Pool\Config(), new \EasySwoole\Redis\Config\RedisConfig(\EasySwoole\EasySwoole\Config::getInstance()->getConf('REDIS')));
+            $redis = $redisPool->getObj();
+            var_dump($redis->echo('仙士可'));
+            $redisPool->recycleObj($redis);
+        });
+    }
+
 
     /**
      * 此控制器抛异常时会执行此方法
