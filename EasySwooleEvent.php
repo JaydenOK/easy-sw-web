@@ -54,21 +54,34 @@ class EasySwooleEvent implements Event
 
 
         //================= 创建自定义进程 start =================
-        $processConfig = new \EasySwoole\Component\Process\Config([
-            'processName' => 'AsyncMessageProcess', // 设置 进程名称
-            'processGroup' => 'AsyncMessageProcess', // 设置 进程组名称
-            'arg' => [
-                'arg1' => '123',
+        $processConfigArr = [
+            'AsyncMessageProcess' => [
+                'class' => \App\Process\AsyncMessageProcess::class,
+                'processName' => 'AsyncMessageProcess',
+                'processGroup' => 'AsyncMessageProcess',
+                'processNum' => 3,  //启动进程数
+                'arg' => [],
             ],
-            // 传递参数到自定义进程中
-            'enableCoroutine' => true, // 设置 自定义进程自动开启协程环境
-        ]);
-        // 【推荐】使用 \EasySwoole\Component\Process\Manager 类注册自定义进程
-        $asyncMessageProcess = (new \App\Process\AsyncMessageProcess($processConfig));
-        // 【可选操作】把 tickProcess 的 Swoole\Process 注入到 Di 中，方便在后续控制器等业务中给自定义进程传输信息(即实现主进程与自定义进程间通信)
-        \EasySwoole\Component\Di::getInstance()->set('AsyncMessageProcess', $asyncMessageProcess->getProcess());
-        // 注册进程
-        \EasySwoole\Component\Process\Manager::getInstance()->addProcess($asyncMessageProcess);
+        ];
+        foreach ($processConfigArr as $processName => $item) {
+            for ($i = 0; $i < $item['processNum']; $i++) {
+                $processConfig = new \EasySwoole\Component\Process\Config([
+                    'processName' => $item['processNum'],
+                    'processGroup' => $item['processGroup'],
+                    'arg' => $item['arg'],
+                    'enableCoroutine' => true,  //自定义进程自动开启协程环境
+                ]);
+                // 【推荐】使用 \EasySwoole\Component\Process\Manager 类注册自定义进程
+                // 【可选操作】把 tickProcess 的 Swoole\Process 注入到 Di 中，方便在后续控制器等业务中给自定义进程传输信息(即实现主进程与自定义进程间通信)
+                // 注册进程
+                /**
+                 * @var $myProcess \EasySwoole\Component\Process\AbstractProcess
+                 */
+                $myProcess = new $item['class']($processConfig);
+                \EasySwoole\Component\Di::getInstance()->set($processName, $myProcess->getProcess());
+                \EasySwoole\Component\Process\Manager::getInstance()->addProcess($myProcess);
+            }
+        }
 
 
         //=================   实现 onRequest 事件  =================

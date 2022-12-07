@@ -12,6 +12,7 @@ use EasySwoole\Pool\Exception\PoolEmpty;
 class Account extends Controller
 {
 
+    //http-server on request 回调函数环境方法-协程环境，可以直接使用协程api
     public function lists()
     {
         // 获取 get 参数
@@ -44,7 +45,7 @@ class Account extends Controller
                 ->limit(20)
                 ->get('yibai_amazon_account');
             // 返回给客户端
-            var_dump($builder->getLastQuery());
+            //var_dump($builder->getLastQuery());
             $result = $mysqlClient->execBuilder();
             $this->response()->write(json_encode($result, JSON_UNESCAPED_UNICODE));
         } catch (Exception $e) {
