@@ -30,12 +30,15 @@ class EasySwooleEvent implements Event
         DbManager::getInstance()->addConnection($ormConnection, 'main');
 
 
-        //=================  注册redis连接池  =================
+        //=================  注册redis连接池 (http://192.168.92.208:9511/Account/mysqlPoolList)  =================
         $config = new \EasySwoole\Pool\Config();
         $redisConfig1 = new \EasySwoole\Redis\Config\RedisConfig(Config::getInstance()->getConf('REDIS'));
         // 注册连接池管理对象
         \EasySwoole\Pool\Manager::getInstance()->register(new \App\Pool\RedisPool($config, $redisConfig1), 'redis');
 
+
+        //=================  注册普通mysql (不使用连接池时使用: http://192.168.92.208:9511/Account/lists) =================
+        DbManager::getInstance()->addConnection($ormConnection);
 
     }
 

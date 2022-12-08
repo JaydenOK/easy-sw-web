@@ -27,7 +27,7 @@ class Account extends Controller
 
     //http://192.168.92.208:9511/Account/mysqlPoolTest
     //使用mysql连接池
-    public function mysqlPoolTest()
+    public function mysqlPoolList()
     {
         $platformCode = $this->request()->getQueryParam('platform_code');
         // 获取连接池
