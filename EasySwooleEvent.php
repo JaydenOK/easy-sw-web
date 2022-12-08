@@ -23,7 +23,7 @@ class EasySwooleEvent implements Event
         //================= 注册 mysql orm 连接池 =================
         $config = new \EasySwoole\ORM\Db\Config(\EasySwoole\EasySwoole\Config::getInstance()->getConf('MYSQL'));
         // 【可选操作】我们已经在 dev.php 中进行了配置
-        $config->setMinObjectNum(5)->setMaxObjectNum(20); // 配置连接池数量
+        $config->setMinObjectNum(5)->setMaxObjectNum(30); // 配置连接池数量，总连接数 = minObjectNum * SETTING.worker_num
         //DbManager::getInstance()->addConnection(new Connection($config));
         // 设置指定连接名称 后期可通过连接名称操作不同的数据库
         $ormConnection = new Connection($config);
@@ -48,7 +48,7 @@ class EasySwooleEvent implements Event
         $register->add($register::onWorkerStart, function () {
             // 链接预热
             // ORM 1.4.31 版本之前请使用 getClientPool()
-            // __getClientPool : \EasySwoole\ORM\Db\MysqlPool
+            // __getClientPool : \EasySwoole\ORM\Db\MysqlPool ：实例化pool，真正实例化mysql连接在：keepMin()
             DbManager::getInstance()->getConnection('main')->__getClientPool()->keepMin();
         });
 

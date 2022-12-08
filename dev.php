@@ -49,7 +49,7 @@ return [
         'intervalCheckTime' => 15 * 1000, // 设置 连接池定时器执行频率
         'maxIdleTime' => 10, // 设置 连接池对象最大闲置时间 (秒)
         'maxObjectNum' => 20, // 设置 连接池最大数量
-        'minObjectNum' => 5, // 设置 连接池最小数量
+        'minObjectNum' => 5, // 设置 连接池最小数量， 总连接数 = minObjectNum * SETTING.worker_num
         'getObjectTimeout' => 3.0, // 设置 获取连接池的超时时间
     ],
 

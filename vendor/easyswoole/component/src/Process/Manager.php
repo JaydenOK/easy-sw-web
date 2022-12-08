@@ -137,6 +137,8 @@ class Manager
     {
         foreach ($this->processList as $hash => $process) {
             if ($this->autoRegister[$hash] === true) {
+                //addProcess 添加一个用户自定义的工作进程。此函数通常用于创建一个特殊的工作进程，用于监控、上报或者其他特殊的任务。
+                //不需要执行 start。在 Server 启动时会自动创建进程，并执行指定的子进程函数
                 $server->addProcess($process->getProcess());
             }
         }

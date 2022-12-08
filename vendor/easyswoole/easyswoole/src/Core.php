@@ -370,7 +370,7 @@ class Core
         });
         $server = ServerManager::getInstance()->getSwooleServer();
         TaskManager::getInstance()->attachToServer($server);
-        //初始化进程管理器
+        //初始化进程管理器，启动自定义用户进程
         Manager::getInstance()->attachToServer($server);
         //初始化Bridge
         Bridge::getInstance()->attachServer($server, $serverName);
