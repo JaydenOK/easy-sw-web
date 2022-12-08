@@ -57,8 +57,8 @@ class EasySwooleEvent implements Event
         $processConfigArr = [
             'AsyncMessageProcess' => [
                 'class' => \App\Process\AsyncMessageProcess::class,
-                'processName' => 'AsyncMessageProcess',
-                'processGroup' => 'AsyncMessageProcess',
+                'processName' => 'EasyAsyncMessageProcess',
+                'processGroup' => 'EasyAsyncMessageProcess',
                 'processNum' => 3,  //启动进程数
                 'arg' => [],
             ],
@@ -66,7 +66,7 @@ class EasySwooleEvent implements Event
         foreach ($processConfigArr as $processName => $item) {
             for ($i = 0; $i < $item['processNum']; $i++) {
                 $processConfig = new \EasySwoole\Component\Process\Config([
-                    'processName' => $item['processNum'],
+                    'processName' => $item['processName'] . '_' . $i,
                     'processGroup' => $item['processGroup'],
                     'arg' => $item['arg'],
                     'enableCoroutine' => true,  //自定义进程自动开启协程环境
