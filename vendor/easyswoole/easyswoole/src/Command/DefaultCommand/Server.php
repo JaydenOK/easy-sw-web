@@ -72,7 +72,7 @@ class Server implements CommandInterface
         $serverType = $conf->getConf('MAIN_SERVER.SERVER_TYPE');
         $displayItem = [];
         switch ($serverType) {
-            case EASYSWOOLE_SERVER:
+            case EASYSWOOLE_SERVER: //启动 socket server
             {
                 $serverType = 'SWOOLE_SERVER';
                 break;

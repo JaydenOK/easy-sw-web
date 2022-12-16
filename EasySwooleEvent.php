@@ -22,12 +22,17 @@ class EasySwooleEvent implements Event
 
         //================= 注册 mysql orm 连接池 =================
         $config = new \EasySwoole\ORM\Db\Config(\EasySwoole\EasySwoole\Config::getInstance()->getConf('MYSQL'));
-        // 【可选操作】我们已经在 dev.php 中进行了配置
-        $config->setMinObjectNum(5)->setMaxObjectNum(30); // 配置连接池数量，总连接数 = minObjectNum * SETTING.worker_num
+
+        $config->setMinObjectNum(5)->setMaxObjectNum(30); // 【可选操作】我们已经在 dev.php 中进行了配置 配置连接池数量; 总连接数 = minObjectNum * SETTING.worker_num
         //DbManager::getInstance()->addConnection(new Connection($config));
         // 设置指定连接名称 后期可通过连接名称操作不同的数据库
         $ormConnection = new Connection($config);
-        DbManager::getInstance()->addConnection($ormConnection, 'main');
+
+        DbManager::getInstance()->addConnection(new Connection($config), 'main');    //连接池1
+        DbManager::getInstance()->addConnection(new Connection($config), 'write');     //连接池2
+
+        //=================  注册默认mysql (不使用连接池时使用: http://192.168.92.208:9511/Account/lists) =================
+        DbManager::getInstance()->addConnection(new Connection($config), 'default');    //非连接池
 
 
         //=================  注册redis连接池 (http://192.168.92.208:9511/Account/mysqlPoolList)  =================
@@ -35,10 +40,6 @@ class EasySwooleEvent implements Event
         $redisConfig1 = new \EasySwoole\Redis\Config\RedisConfig(Config::getInstance()->getConf('REDIS'));
         // 注册连接池管理对象
         \EasySwoole\Pool\Manager::getInstance()->register(new \App\Pool\RedisPool($config, $redisConfig1), 'redis');
-
-
-        //=================  注册普通mysql (不使用连接池时使用: http://192.168.92.208:9511/Account/lists) =================
-        DbManager::getInstance()->addConnection($ormConnection);
 
     }
 
@@ -52,7 +53,14 @@ class EasySwooleEvent implements Event
             // 链接预热
             // ORM 1.4.31 版本之前请使用 getClientPool()
             // __getClientPool : \EasySwoole\ORM\Db\MysqlPool ：实例化pool，真正实例化mysql连接在：keepMin()
-            DbManager::getInstance()->getConnection('main')->__getClientPool()->keepMin();
+            //DbManager::getInstance()->getConnection('main')->__getClientPool()->keepMin();
+            /**
+             * @var $connection \EasySwoole\ORM\Db\Connection
+             */
+            $connection = DbManager::getInstance()->getConnection('main');
+            $connection->__getClientPool()->keepMin();   //预热连接池1
+
+            DbManager::getInstance()->getConnection('write')->__getClientPool()->keepMin(); //连接池2
         });
 
 
@@ -123,6 +131,28 @@ class EasySwooleEvent implements Event
         /** @var \EasySwoole\EasySwoole\Swoole\EventRegister $register * */
 //        $register->set($register::onMessage,function (\Swoole\WebSocket\Server $server, \Swoole\WebSocket\Frame $frame){
 //        });
+
+
+        //================= 注册 WebSocket  =================
+        $config = new \EasySwoole\Socket\Config();
+        $config->setType($config::WEB_SOCKET);
+        $config->setParser(\App\Parser\WebSocketParser::class);
+        $dispatcher = new \EasySwoole\Socket\Dispatcher($config);
+        $config->setOnExceptionHandler(function (\Swoole\Server $server, \Throwable $throwable, string $raw, \EasySwoole\Socket\Client\WebSocket $client, \EasySwoole\Socket\Bean\Response $response) {
+            $response->setMessage('system error!');
+            $response->setStatus($response::STATUS_RESPONSE_AND_CLOSE);
+        });
+
+        // 自定义握手
+        /*$websocketEvent = new WebSocketEvent();
+        $register->set(EventRegister::onHandShake, function (\Swoole\Http\Request $request, \Swoole\Http\Response $response) use ($websocketEvent) {
+            $websocketEvent->onHandShake($request, $response);
+        });*/
+
+        $register->set($register::onMessage, function (\Swoole\Websocket\Server $server, \Swoole\Websocket\Frame $frame) use ($dispatcher) {
+            $dispatcher->dispatch($server, $frame->data, $frame);
+        });
+
 
     }
 

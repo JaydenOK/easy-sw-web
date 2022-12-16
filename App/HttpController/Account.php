@@ -15,9 +15,8 @@ class Account extends Controller
     //http-server on request 回调函数环境方法-协程环境，可以直接使用协程api
     public function lists()
     {
-        // 获取 get 参数
         $platformCode = $this->request()->getQueryParam('platform_code');
-        // 多个主键
+        //EasySwooleEvent 注册default连接使用
         $lists = AmazonAccount::create()->limit(20)->all();
         $data = json_encode($lists, JSON_UNESCAPED_UNICODE);
         // 返回给客户端

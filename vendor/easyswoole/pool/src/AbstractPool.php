@@ -16,7 +16,9 @@ abstract class AbstractPool
 {
     //已创建连接数
     private $createdNum = 0;
-    /** @var Channel */
+    /**
+     * @var Channel 保存具体连接对象 EasySwoole\ORM\Db\MysqliClient|EasySwoole\Redis\Redis
+     */
     private $poolChannel;
     private $objHash = [];
     /** @var Config */
@@ -150,7 +152,7 @@ abstract class AbstractPool
         ]);
         if (is_object($object)) {
             $hash = $object->__objHash;
-            //标记该对象已经被使用，不在pool中
+            //标记该对象已经被使用
             $this->objHash[$hash] = false;
             $this->inUseObject[$hash] = $object;
             $object->__lastUseTime = time();
@@ -221,7 +223,8 @@ abstract class AbstractPool
     }
 
     /*
-     * 超过$idleTime未出队使用的，将会被回收。
+     * 检查连接池里的每个连接
+     * 超过$idleTime未出队使用的，将会被回收。10s
      */
     public function idleCheck(int $idleTime)
     {
@@ -236,7 +239,7 @@ abstract class AbstractPool
             if (!$item) {
                 continue;
             }
-            //回收超时没有使用的链接
+            //回收超时没有使用的链接，$item->__lastUseTime初始化或获取时，赋值时间
             if (time() - $item->__lastUseTime > $idleTime) {
                 //标记为不在队列内，允许进行gc回收
                 $hash = $item->__objHash;
@@ -251,6 +254,7 @@ abstract class AbstractPool
                     $this->unsetObj($item);
                     continue;
                 } else {
+                    //未超时还原回去Channel
                     $this->poolChannel->push($item);
                 }
             }
@@ -258,7 +262,7 @@ abstract class AbstractPool
     }
 
     /*
-     * 允许外部调用
+     * 允许外部调用，15分钟检查一次
      */
     public function intervalCheck()
     {
@@ -300,6 +304,7 @@ abstract class AbstractPool
         }
         if ($this->createdNum < $num) {
             $left = $num - $this->createdNum;
+            //echo "num:{$num}, {this->createdNum}：{$this->createdNum}, need initObject num left:{$left}" . PHP_EOL;
             while ($left > 0) {
                 /*
                  * 避免死循环
@@ -343,21 +348,27 @@ abstract class AbstractPool
         */
         $this->init();
         $obj = null;
+        //预增加创建数
         $this->createdNum++;
         $this->statusTable->incr($this->poolHash(), 'created');
         if ($this->createdNum > $this->getConfig()->getMaxObjectNum()) {
+            //大于最大时，减预增加数，返回
             $this->createdNum--;
             $this->statusTable->decr($this->poolHash(), 'created');
             return false;
         }
         try {
-            //获取实际连接对象，抽象方法，保存通道poolChannel
+            //获取实际连接对象，抽象方法
+            /*
+             * @var $obj EasySwoole\ORM\Db\MysqliClient|EasySwoole\Redis\Redis
+             */
             $obj = $this->createObject();
             if (is_object($obj)) {
                 $hash = Random::character(12);
                 $this->objHash[$hash] = true;
                 $obj->__objHash = $hash;
                 $obj->__lastUseTime = time();
+                //连接对象，保存通道poolChannel
                 $this->poolChannel->push($obj);
                 return true;
             } else {
@@ -486,13 +497,15 @@ abstract class AbstractPool
         }
     }
 
-    //维持连接池最低连接数方法，懒惰模式，可以提前创建 pool对象，因此调用前执行初始化检测
+    //维持连接池最低连接数方法，懒惰模式，可以提前创建 pool对象，因此调用前执行初始化检测，启动或第一次获取时执行，一次
     private function init()
     {
         if ((!$this->poolChannel) && (!$this->destroy)) {
+            echo 'AbstractPool init()' . PHP_EOL;
             //初始化通道，最大数+8
             $this->poolChannel = new Channel($this->conf->getMaxObjectNum() + 8);
             if ($this->conf->getIntervalCheckTime() > 0) {
+                //15分钟检查一次
                 $this->intervalCheckTimerId = Timer::tick($this->conf->getIntervalCheckTime(), [$this, 'intervalCheck']);
             }
             $this->loadAverageTimerId = Timer::tick(5 * 1000, function () {

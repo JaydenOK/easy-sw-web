@@ -116,9 +116,10 @@ class Process implements CommandInterface
         $unit = ['b', 'kb', 'mb', 'gb', 'tb', 'pb'];
 
         foreach ($json as $key => $value) {
-            $json[$key]['memoryUsage'] = round($value['memoryUsage'] / pow(1024, ($i = floor(log($value['memoryUsage'], 1024)))), 2) . ' ' . $unit[$i];
-            $json[$key]['memoryPeakUsage'] = round($value['memoryPeakUsage'] / pow(1024, ($i = floor(log($value['memoryPeakUsage'], 1024)))), 2) . ' ' . $unit[$i];
-            $json[$key]['startUpTime'] = date('Y-m-d H:i:s',$json[$key]['startUpTime']);
+
+            $json[$key]['memoryUsage'] = $value['memoryUsage'] == 0 ? '0.00' : round($value['memoryUsage'] / pow(1024, ($i = floor(log($value['memoryUsage'], 1024)))), 2) . ' ' . $unit[$i];
+            $json[$key]['memoryPeakUsage'] = $value['memoryPeakUsage'] == 0 ? '0.00' : round($value['memoryPeakUsage'] / pow(1024, ($i = floor(log($value['memoryPeakUsage'], 1024)))), 2) . ' ' . $unit[$i];
+            $json[$key]['startUpTime'] = date('Y-m-d H:i:s', $json[$key]['startUpTime']);
         }
 
         return $json;
