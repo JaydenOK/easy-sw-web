@@ -349,7 +349,7 @@ class Core
         if (!empty($mode)) {
             $this->runMode($mode);
         }
-
+        //php easyswoole server start -mode=websocket (指定配置文件)
         $file = EASYSWOOLE_ROOT . "/{$this->runMode}.php";
         if (!file_exists($file)) {
             die(Color::error("can not load config file {$this->runMode}.php") . "\n");

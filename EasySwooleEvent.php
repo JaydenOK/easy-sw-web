@@ -138,7 +138,11 @@ class EasySwooleEvent implements Event
         $config->setType($config::WEB_SOCKET);
         $config->setParser(\App\Parser\WebSocketParser::class);
         $dispatcher = new \EasySwoole\Socket\Dispatcher($config);
-        $config->setOnExceptionHandler(function (\Swoole\Server $server, \Throwable $throwable, string $raw, \EasySwoole\Socket\Client\WebSocket $client, \EasySwoole\Socket\Bean\Response $response) {
+        $config->setOnExceptionHandler(function (
+            \Swoole\Server $server, \Throwable $throwable,
+            string $raw, \EasySwoole\Socket\Client\WebSocket $client,
+            \EasySwoole\Socket\Bean\Response $response
+        ) {
             $response->setMessage('system error!');
             $response->setStatus($response::STATUS_RESPONSE_AND_CLOSE);
         });
@@ -149,6 +153,7 @@ class EasySwooleEvent implements Event
             $websocketEvent->onHandShake($request, $response);
         });*/
 
+        //接收到websocket消息时，交给dispatch转发到控制器
         $register->set($register::onMessage, function (\Swoole\Websocket\Server $server, \Swoole\Websocket\Frame $frame) use ($dispatcher) {
             $dispatcher->dispatch($server, $frame->data, $frame);
         });

@@ -39,7 +39,7 @@ abstract class AbstractPool
      * 如果成功创建了,请返回对应的obj
      */
     abstract protected function createObject();
-
+    
     public function __construct(Config $conf)
     {
         if ($conf->getMinObjectNum() >= $conf->getMaxObjectNum()) {

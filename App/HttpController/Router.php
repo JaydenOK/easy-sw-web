@@ -1,5 +1,6 @@
 <?php
 
+//动态路由设置, 基于 [FastRoute]
 
 namespace App\HttpController;
 
